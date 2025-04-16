@@ -142,7 +142,7 @@ def main():
     pc_start = z["pc_start"]
     pc_end = z["pc_end"]
     
-    mesh_dict, joint_axis_pred, pivot_point_pred = run_one(
+    mesh_dict, joint_axis_pred, pivot_point_pred, _ = run_one(
         pc_start=pc_start,
         pc_end=pc_end,
         model=model,
@@ -193,12 +193,13 @@ def entrypoint(**deps):
                     generator=generator,
                     override_articulation_type=articulation_type)        
         
+        est_axis_dir = joint_axis_pred
+        est_pivot = pivot_point_pred * norm_scale + norm_center
+        
         if articulation_type == "revolute":
             gt_axis_dir = np.array(params["axis_dir"])
             gt_pivot = np.array(params["position"])
             
-            est_axis_dir = joint_axis_pred
-            est_pivot = pivot_point_pred * norm_scale + norm_center
             
             axis_error, pivot_error = evaluate_revolute_joint(
                 est_axis=normalize_np(est_axis_dir),
@@ -208,12 +209,9 @@ def entrypoint(**deps):
             )
             pivot_error /= params["characteristic_length"]
             
-            pass
-            
             metrics_dict = {
                 "articulation_type": articulation_type,
-                "correct": est_art_type == "revolute",
-                "match_key": match_key,
+                "correct": True,
                 "error": {
                     "axis_error": axis_error,
                     "pivot_error": pivot_error,
@@ -222,10 +220,7 @@ def entrypoint(**deps):
 
         else:
             gt_axis_dir = np.array(params["axis_dir"])
-            est_art_params = identified_objects[match_key]["articulation_params"]
-            est_art_type = identified_objects[match_key]["joint_type"]
 
-            est_axis_dir = est_art_params["translation_dir"]
             axis_error = evaluate_prismatic_joint(
                 est_axis=normalize(est_axis_dir),
                 gt_axis=normalize(gt_axis_dir),
@@ -233,8 +228,7 @@ def entrypoint(**deps):
 
             metrics_dict = {
                 "articulation_type": articulation_type,
-                "correct": est_art_type == "prismatic",
-                "match_key": match_key,
+                "correct": True,
                 "error": {
                     "axis_error": axis_error,
                 },
@@ -244,7 +238,7 @@ def entrypoint(**deps):
 
     # log metrics
     save_path = (
-        f"{Args.eval_root}/{Args.eval_prefix}/{Args.data_prefix}/spark/metrics.pkl"
+        f"{DittoEvalArgs.eval_root}/{DittoEvalArgs.eval_prefix}/{DittoEvalArgs.data_prefix}/ditto/metrics.pkl"
     )
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
