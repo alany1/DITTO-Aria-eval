@@ -12,7 +12,7 @@ from src.models.geo_art_model_v0 import add_r_joint_to_scene
 from src.models.modules.losses_dense_joint import normalize
 from src.utils.joint_estimation import aggregate_dense_prediction_r
 from src.utils.misc import sample_point_cloud
-
+from tqdm import tqdm
 device = 'cuda'
 
 class DittoEvalArgs(PrefixProto):
@@ -168,7 +168,7 @@ def entrypoint(**deps):
     model, generator = setup()
 
 
-    for obj, articulation_type in articulated_objects.items():
+    for obj, articulation_type in tqdm(articulated_objects.items(), desc="Evaluating ditto..."):
         armature, bone = obj.split(":")
         params = bone_params[armature][bone]
         assert articulation_type in ["revolute", "prismatic"]
@@ -222,8 +222,8 @@ def entrypoint(**deps):
             gt_axis_dir = np.array(params["axis_dir"])
 
             axis_error = evaluate_prismatic_joint(
-                est_axis=normalize(est_axis_dir),
-                gt_axis=normalize(gt_axis_dir),
+                est_axis=normalize_np(est_axis_dir),
+                gt_axis=normalize_np(gt_axis_dir),
             )
 
             metrics_dict = {
